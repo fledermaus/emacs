@@ -2445,6 +2445,48 @@ If STRING is nil, the function does nothing."
                                      (process-buffer erc-server-process)
                                    (current-buffer))))))
 
+
+(defvar erc-hidden-p t
+  "Per-buffer flag that tracks whether suppressed lines are currently being
+hidden (used by `erc-toggle-hidden-lines').")
+(make-variable-buffer-local 'erc-hidden-p)
+
+(defun erc-output-hidden-line (string &optional buffer len)
+  (unless (string-match "\n$" string)
+    (setq string (concat string "\n")))
+  (setq len (length string))
+  (erc-put-text-property 0 len 'erc-hidden t string)
+  (erc-put-text-property 0 len 'invisible  erc-hidden-p string)
+  (erc-put-text-property 0 len 'intangible erc-hidden-p string)
+  (erc-display-line string buffer))
+
+(defun erc-toggle-hidden-region (a b &optional buffer)
+  "Toggle the visibility (and tangibility) of text in the region A to B.
+BUFFER takes the same values as for `put-text-property'."
+  (erc-put-text-property a b 'invisible  erc-hidden-p buffer)
+  (erc-put-text-property a b 'intangible erc-hidden-p buffer))
+
+(defun erc-toggle-hidden-lines (&optional buffer)
+  "Toggle the visibility and tangibility of all text marked with the
+erc-hidden property (such as that inserted by `erc-output-hidden-line')
+in BUFFER (defaulting to the current buffer if BUFFER is nil)."
+  (interactive)
+  (if buffer (set-buffer buffer))
+  (setq erc-hidden-p (not erc-hidden-p))
+  (save-excursion
+    (goto-char (point-min))
+    (let ((hidden nil) (p (point)) (go t)
+          (inhibit-read-only t)
+          (inhibit-point-motion-hooks t))
+      (if (get-text-property (point) 'erc-hidden buffer)
+          (setq hidden (point)))
+      (while (and go
+                  (setq p (next-single-property-change p 'erc-hidden buffer)))
+        (if (not hidden)
+            (setq hidden p)
+          (erc-toggle-hidden-region hidden p buffer)
+          (setq hidden nil go (< p (point-max))) )) )))
+
 (defun erc-display-message-highlight (type string)
   "Highlight STRING according to TYPE, where erc-TYPE-face is an ERC face.
 
@@ -2685,10 +2727,11 @@ See also `erc-format-message' and `erc-display-line'."
 
     (if (not (erc-response-p parsed))
         (erc-display-line string buffer)
-      (unless (erc-hide-current-message-p parsed)
-        (erc-put-text-property 0 (length string) 'erc-parsed parsed string)
-        (erc-put-text-property 0 (length string) 'rear-sticky t string)
-        (erc-display-line string buffer)))))
+      (erc-put-text-property 0 (length string) 'erc-parsed parsed string)
+      (erc-put-text-property 0 (length string) 'rear-sticky t string)
+      (if (erc-hide-current-message-p parsed)
+          (erc-output-hidden-line string buffer)
+        (erc-display-line string buffer)) )))
 
 (defun erc-message-type-member (position list)
   "Return non-nil if the erc-parsed text-property at POSITION is in LIST.
