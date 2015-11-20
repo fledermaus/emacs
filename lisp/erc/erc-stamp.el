@@ -173,7 +173,8 @@ from entering them and instead jump over them."
 
 This function is meant to be called from `erc-insert-modify-hook'
 or `erc-send-modify-hook'."
-  (unless (get-text-property (point) 'invisible)
+  (unless (or (get-text-property (point) 'invisible)
+              (get-text-property (point) 'erc-hidden))
     (let ((ct (current-time)))
       (if (fboundp erc-insert-timestamp-function)
 	  (funcall erc-insert-timestamp-function
