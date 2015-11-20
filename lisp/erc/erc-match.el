@@ -633,9 +633,7 @@ See `erc-log-match-format'."
  "Hide foolish comments.
 This function should be called from `erc-text-matched-hook'."
  (when (eq match-type 'fool)
-   (erc-put-text-properties (point-min) (point-max)
-			    '(invisible intangible)
-			    (current-buffer))))
+   (erc-put-hidden-props (point-min) (point-max) (current-buffer))))
 
 (defun erc-beep-on-match (match-type nickuserhost message)
   "Beep when text matches.
