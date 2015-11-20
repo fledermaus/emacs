@@ -2451,13 +2451,20 @@ If STRING is nil, the function does nothing."
 hidden (used by `erc-toggle-hidden-lines').")
 (make-variable-buffer-local 'erc-hidden-p)
 
-(defun erc-output-hidden-line (string &optional buffer len)
+(defun erc-put-hidden-props (start end &optional object)
+  "Apply the standard properties for text whose visibility should be
+controlled by `erc-toggle-hidden-lines'.\n
+The values of START, END and OBJECT are as for `erc-put-text-properties'.\n
+Note that the actual current visibility of the text will depend
+on the value of `erc-hidden-p'."
+  (erc-put-text-property start end 'erc-hidden t object)
+  (erc-put-text-property start end 'invisible  erc-hidden-p object)
+  (erc-put-text-property start end 'intangible erc-hidden-p object))
+
+(defun erc-output-hidden-line (string &optional buffer)
   (unless (string-match "\n$" string)
     (setq string (concat string "\n")))
-  (setq len (length string))
-  (erc-put-text-property 0 len 'erc-hidden t string)
-  (erc-put-text-property 0 len 'invisible  erc-hidden-p string)
-  (erc-put-text-property 0 len 'intangible erc-hidden-p string)
+  (erc-put-hidden-props 0 (length string) string)
   (erc-display-line string buffer))
 
 (defun erc-toggle-hidden-region (a b &optional buffer)
